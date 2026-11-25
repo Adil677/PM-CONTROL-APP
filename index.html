@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM Control App v2</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --text: #18181b;
+      --panel: #fff;
+      --line: #ececf0;
+      --accent: #007aff;
+      --radius: 22px;
+      --shadow: 0 10px 40px rgba(52,78,163,.04);
+      --muted: #8e8e93;
+    }
+    body { margin:0; font-family:'SF Pro Display','Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .main { max-width: 450px; margin: 45px auto 0; }
+    .auth-card { background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--line); padding:38px 32px 24px; }
+    .app-title { font-size:2.2rem; font-weight:700; letter-spacing:-0.01em; color:var(--accent); text-align:center; margin-bottom:8px; }
+    .app-desc { text-align:center; color:var(--muted); margin-bottom:26px; }
+    .field {margin-bottom:20px;}
+    label {display:block; color:var(--muted); font-weight:500; font-size:.97rem; margin-bottom:6px;}
+    input,select {padding:13px 15px; width:100%; border:1px solid var(--line); border-radius:13px; font:inherit; font-size:1.1rem; color:var(--text); background:#fafafc;}
+    input:focus,select:focus{outline:none; border-color:var(--accent);}
+    .btn { width:100%; margin-top:2px; padding:14px 0; border:none; border-radius:12px; font-weight:700; font-size:1.09rem; color:#fff; background:var(--accent); cursor:pointer; transition:.14s;}
+    .btn:hover{background:#278dff;}
+    .lang-row{margin-top:18px;text-align:center;}
+    select{max-width:167px; margin: auto;display:block;}
+    .footer {margin:36px 0 7px;text-align:center;color:var(--muted); font-size:0.92rem;}
+    .dashboard {display:none;}
+    .nav {margin:42px auto 0;display:flex;justify-content:center;gap:21px;}
+    .nav-btn {background:#fff;border-radius:16px;border:1px solid var(--line);font-size:1.11rem;padding:12px 22px;color:var(--muted);cursor:pointer;font-weight:600;transition:.15s;}
+    .nav-btn.active, .nav-btn:hover{background:#f0f3f9;color:var(--accent);border-color:var(--accent);}
+    .stats-bar{display:flex;gap:15px;margin:34px 0 22px;}
+    .stat-card{flex:1;background:#fff;border-radius:14px;padding:21px 18px;text-align:center;box-shadow:0 3px 18px rgba(0,0,0,.05);border:1px solid var(--line);}
+    .stat-label{color:var(--muted);font-size:.92rem;margin-top:7px;}
+    .stat-value{font-size:1.82rem;font-weight:700;letter-spacing:-.02em;}
+    .tab-content { margin-top: 24px; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .kanban-board { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; margin-top: 25px; }
+    .kanban-column { flex: 1; min-width: 250px; background: rgba(255,255,255,0.5); border-radius: 16px; border: 1px dashed var(--line); padding: 15px; }
+    .kanban-column h3 { font-size: 1rem; color: var(--muted); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kanban-card { background: var(--panel); border-radius: 12px; border: 1px solid var(--line); padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    @media(max-width:700px){.main{margin:14px auto 0;padding:0 4px;}.auth-card{padding:18px 4px;}.nav{gap:8px;}.stats-bar{flex-direction:column;gap:10px;}.stat-card{padding:13px 11px;}}
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="auth-card" id="authCard">
+      <div class="app-title">PM Control App</div>
+      <div class="app-desc">Modern Apple-style project dashboard.<br/>Set your password and preferred language to begin.</div>
+      <form id="authForm">
+        <div class="field">
+          <label for="lang">Language</label>
+          <select id="lang">
+            <option value="en">English</option>
+            <option value="ur">اردو</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pass">Password</label>
+          <input id="pass" type="password" autocomplete="current-password">
+        </div>
+        <button class="btn" type="submit">Enter App</button>
+      </form>
+    </div>
+    <!-- Dashboard chunk -->
+    <div class="dashboard" id="dashboard">
+      <div class="app-title" style="font-size:2rem;margin-bottom:5px;">Project Control Center</div>
+      <div class="app-desc">Your projects, tasks, and approvals—all fully local and private.</div>
+      <div class="nav" id="navBar">
+        <button class="nav-btn active" data-view="dash">Dashboard</button>
+        <button class="nav-btn" data-view="proj">Projects</button>
+        <button class="nav-btn" data-view="task">Tasks</button>
+        <button class="nav-btn" data-view="approval">Approvals</button>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-value" id="statProjects">0</div>
+          <div class="stat-label">Projects</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statTasks">0</div>
+          <div class="stat-label">Tasks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-label">Pending approvals</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statBlocked">0</div>
+          <div class="stat-label">Blocked</div>
+        </div>
+      </div>
+      <!-- Add more dashboard modules here (next chunk) -->
+      <div class="tab-content" id="tabContent">
+        <!-- Dashboard view -->
+        <div class="tab-pane active" id="view-dash" style="padding:15px 0;">
+          <div class="item-card" style="text-align:center;padding:45px 20px;color:var(--muted);">
+            <div style="font-size:2.4rem;margin-bottom:14px;">✦</div>
+            <strong style="font-size:1.15rem;color:var(--text);display:block;margin-bottom:8px;" id="dashWelcomeTitle">Welcome to your PM Command Center</strong>
+            <span id="dashWelcomeSub">Use the elegant navigation bar above to manage your projects, delegate task tickets to AI agents, and authorize deliverables.</span>
+          </div>
+          <div style="margin-top:20px;">
+            <h3 id="boardTitle">Active Task Board</h3>
+            <div class="kanban-row" id="kanbanBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;">
+              <!-- Columns loaded via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Projects view -->
+        <div class="tab-pane" id="view-proj" style="display:none;padding:15px 0;">
+          <div class="item-card">
+            <h3 id="createProjTitle" style="margin-top:0;">Create a New Project</h3>
+            <form id="projectForm">
+              <div class="field">
+                <label id="projNameLabel" for="projectName">Project Name</label>
+                <input id="projectName" placeholder="e.g. Health App MVP" required />
+              </div>
+              <div class="field">
+                <label id="projGoalLabel" for="projectGoal">Business Goal / Objective</label>
+                <textarea id="projectGoal" placeholder="What should this project achieve?"></textarea>
+              </div>
+              <div class="grid-row" style="display:flex;gap:14px;">
+                <div class="field" style="flex:1;">
+                  <label id="projPlatformLabel" for="projectPlatform">Platform</label>
+                  <select id="projectPlatform" style="max-width:100%;">
+                    <option>Web</option>
+                    <option>Mobile</option>
+                    <option>Both</option>
+                  </select>
+                </div>
+                <div class="field" style="flex:1;">
+                  <label id="projDeadlineLabel" for="projectDeadline">Target Deadline</label>
+                  <input id="projectDeadline" type="date" />
+                </div>
+              </div>
+              <button class="btn" type="submit" id="saveProjBtn">Save Project</button>
+            </form>
+          </div>
+          <div style="margin-top:25px;">
+            <h3 id="savedProjTitle">Saved Projects</h3>
+            <div id="projectList" class="list"></div>
+          </div>
+        </div>
+
+        <!-- Tasks view -->
+        <div class="tab-pane" id="view-task" style="display:none;padding:15px 0;">
+          <div class="item-card">
+            <h3 id="addTaskTitle" style="margin-top:0;">Add Task Ticket</h3>
+            <form id="taskForm">
+              <div class="field">
+                <label id="taskTitleLabel" for="taskTitle">Task Name / Title</label>
+                <input id="taskTitle" placeholder="e.g. Setup payment integration" required />
+              </div>
+              <div class="grid-row" style="display:flex;gap:14px;">
+                <div class="field" style="flex:1;">
+                  <label id="taskProjLabel" for="taskProject">Project Link</label>
+                  <select id="taskProject" style="max-width:100%;"></select>
+                </div>
+                <div class="field" style="flex:1;">
+                  <label id="taskRoleLabel" for="taskRole">Assignee AI Role</label>
+                  <select id="taskRole" style="max-width:100%;"></select>
+                </div>
+              </div>
+              <div class="field">
+                <label id="taskGoalLabel" for="taskGoal">Goal / Deliverable</label>
+                <textarea id="taskGoal" placeholder="What does this role need to achieve?"></textarea>
+              </div>
+              <div class="field">
+                <label id="taskContextLabel" for="taskContext">Input Context / SOPs</label>
+                <textarea id="taskContext" placeholder="Any database schemas, files, or guidelines?"></textarea>
+              </div>
+              <div class="grid-row" style="display:flex;gap:14px;">
+                <div class="field" style="flex:1;">
+                  <label id="taskPriorityLabel" for="taskPriority">Priority</label>
+                  <select id="taskPriority" style="max-width:100%;">
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+                <div class="field" style="flex:1;">
+                  <label id="taskApprovalLabel" for="taskNeedsApproval">Needs PM Approval?</label>
+                  <select id="taskNeedsApproval" style="max-width:100%;">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn" type="submit" id="saveTaskBtn">Create Task Ticket</button>
+            </form>
+          </div>
+          <div style="margin-top:25px;">
+            <h3 id="taskListTitle">Active Tasks</h3>
+            <div id="taskList" class="list"></div>
+          </div>
+        </div>
+
+        <!-- Approvals view -->
+        <div class="tab-pane" id="view-approval" style="display:none;padding:15px 0;">
+          <div class="item-card" style="margin-bottom:20px;">
+            <h3 id="approvalsTitle" style="margin-top:0;">Pending Approvals Panel</h3>
+            <p class=\"muted\" style=\"font-size:.95rem;\" id="approvalsSub">Critical task submissions that require your PM signature before deployment or merge.</p>
+          </div>
+          <div id="approvalsList" class="list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">PM Control v2 &middot; Apple UI prototype &copy; 2026</div>
+  </div>
+  <script>
+    // State/init
+    const AUTH_KEY = 'pmControlAppAuth_v2';
+    const SESSION_KEY = 'pmControlAppSession_v2';
+    const DATA_KEY = 'pmControlAppData_v2';
+    const roles = ["Junior PM","Technical Manager","Full Stack Dev 1","Full Stack Dev 2","QA","Mobile App Developer","HR","Finance","Social Media"];
+    let state = {language:'en', authenticated:false, data:{projects:[],tasks:[]}};
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function showDashboard() {
+      document.getElementById('authCard').style.display='none';
+      document.getElementById('dashboard').style.display='block';
+      document.body.style.background= 'var(--bg)';
+    }
+    function showAuth() {
+      document.getElementById('authCard').style.display='block';
+      document.getElementById('dashboard').style.display='none';
+      document.body.style.background= 'var(--bg)';
+    }
+    function saveSession(auth) {
+      localStorage.setItem(SESSION_KEY,auth?'true':'false');
+      state.authenticated=auth;
+    }
+    function saveData() {
+      localStorage.setItem(DATA_KEY,JSON.stringify(state.data));
+    }
+    // Simple password check
+    const authForm = document.getElementById('authForm');
+    authForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      const lang = document.getElementById('lang').value;
+      const pass = document.getElementById('pass').value;
+      state.language = lang;
+      if(pass.length<4){alert('Password must be at least 4 chars');return;}
+      localStorage.setItem(AUTH_KEY,pass);
+      saveSession(true);
+      showDashboard();
+    });
+    // Restore session
+    if(localStorage.getItem(SESSION_KEY)==='true' && localStorage.getItem(AUTH_KEY)){
+      showDashboard();
+      state.authenticated=true;
+    }
+    // Language switcher placeholder (next chunk)
+    // --- Navigation tabs
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        navButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const targetView = btn.getAttribute('data-view');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('view-' + targetView).classList.add('active');
+      });
+    });
+
+    // --- State helpers
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    // --- Populate dropdowns
+    const rolesList = ["Junior PM", "Technical Manager", "Full Stack Dev 1", "Full Stack Dev 2", "QA", "Mobile App Developer", "HR", "Finance", "Social Media"];
+    function populateDropdowns() {
+      const projSelect = document.getElementById('taskProj');
+      const roleSelect = document.getElementById('taskRole');
+      if (!projSelect || !roleSelect) return;
+
+      projSelect.innerHTML = state.data.projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('') || '<option value="">No projects created</option>';
+      roleSelect.innerHTML = rolesList.map(r => `<option value="${r}">${r}</option>`).join('');
+    }
+
+    // --- CRUD: Projects
+    const projectForm = document.getElementById('projectForm');
+    if (projectForm) {
+      projectForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const p = {
+          id: uid(),
+          name: document.getElementById('projectName').value.trim(),
+          goal: document.getElementById('projectGoal').value.trim(),
+          platform: document.getElementById('projectPlatform').value,
+          deadline: document.getElementById('projectDeadline').value
+        };
+        state.data.projects.unshift(p);
+        saveData();
+        this.reset();
+        renderAll();
+      });
+    }
+
+    window.deleteProject = function(id) {
+      state.data.projects = state.data.projects.filter(p => p.id !== id);
+      state.data.tasks = state.data.tasks.filter(t => t.projectId !== id);
+      saveData();
+      renderAll();
+    };
+
+    function renderProjects() {
+      const list = document.getElementById('projectsList');
+      if (!list) return;
+      if (state.data.projects.length === 0) {
+        list.innerHTML = `<div class="item-card muted" style="text-align:center;">No projects saved.</div>`;
+        return;
+      }
+      list.innerHTML = state.data.projects.map(p => `
+        <div class="item-card">
+          <div class="split">
+            <strong>${p.name}</strong>
+            <span class="badge">${p.platform}</span>
+          </div>
+          <div class="muted" style="margin: 10px 0; font-size:0.95rem;">${p.goal || 'No goal specified.'}</div>
+          <div class="split mini" style="margin-top:12px;">
+            <span>Deadline: ${p.deadline || 'None'}</span>
+            <button onclick="deleteProject('${p.id}')" class="btn btn-inline danger" style="padding:4px 10px; font-size:0.8rem; margin:0; width:auto;">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- CRUD: Tasks
+    const taskFormEl = document.getElementById('taskForm');
+    if (taskFormEl) {
+      taskFormEl.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const pid = document.getElementById('taskProj').value;
+        if (!pid) {
+          alert('Please create a project first!');
+          return;
+        }
+        const t = {
+          id: uid(),
+          title: document.getElementById('taskTitle').value.trim(),
+          projectId: pid,
+          role: document.getElementById('taskRole').value,
+          goal: document.getElementById('taskGoal').value.trim(),
+          context: document.getElementById('taskContext').value.trim(),
+          priority: document.getElementById('taskPriority').value,
+          needsApproval: document.getElementById('taskNeedsApproval').value,
+          status: 'Backlog'
+        };
+        state.data.tasks.unshift(t);
+        saveData();
+        this.reset();
+        renderAll();
+      });
+    }
+
+    window.deleteTask = function(id) {
+      state.data.tasks = state.data.tasks.filter(t => t.id !== id);
+      saveData();
+      renderAll();
+    };
+
+    window.updateTaskStatus = function(id, status) {
+      const t = state.data.tasks.find(t => t.id === id);
+      if (t) {
+        t.status = status;
+        saveData();
+        renderAll();
+      }
+    };
+
+    function renderTasks() {
+      const list = document.getElementById('tasksList');
+      if (!list) return;
+      if (state.data.tasks.length === 0) {
+        list.innerHTML = `<div class="item-card muted" style="text-align:center;">No tasks saved.</div>`;
+        return;
+      }
+      const columns = ['Backlog', 'In Progress', 'Review', 'Done', 'Blocked'];
+      list.innerHTML = state.data.tasks.map(t => {
+        const p = state.data.projects.find(proj => proj.id === t.projectId);
+        const pName = p ? p.name : 'Unknown Project';
+        return `
+          <div class="item-card">
+            <div class="split">
+              <strong>${t.title}</strong>
+              <span class="badge">${t.role}</span>
+            </div>
+            <div class="muted" style="margin:8px 0; font-size:0.92rem;">Project: ${pName}</div>
+            <div class="muted" style="margin-bottom:8px; font-size:0.92rem;">Goal: ${t.goal || 'None'}</div>
+            <div class="split mini" style="margin-top:12px; gap:8px;">
+              <select onchange="updateTaskStatus('${t.id}', this.value)" style="padding:6px 10px; font-size:0.85rem; width:auto; margin:0;">
+                ${columns.map(c => `<option value="${c}" ${t.status === c || (!t.status && c==='Backlog') ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+              <button onclick="deleteTask('${t.id}')" class="btn btn-inline danger" style="padding:4px 10px; font-size:0.8rem; margin:0; width:auto;">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- Render Kanban Board
+    function renderKanbanBoard() {
+      const board = document.getElementById('kanbanBoard');
+      if (!board) return;
+      const columns = ['Backlog', 'In Progress', 'Review', 'Done', 'Blocked'];
+      let html = '';
+      columns.forEach(col => {
+        const colTasks = state.data.tasks.filter(t => t.status === col || (!t.status && col === 'Backlog'));
+        html += `
+          <div class="kanban-column">
+            <div class="kanban-col-header split">
+              <h4>${col}</h4>
+              <span class="badge" style="background:rgba(0,113,227,0.1); color:var(--accent); font-size:0.8rem; padding:3px 8px;">${colTasks.length}</span>
+            </div>
+            ${colTasks.map(t => {
+              const p = state.data.projects.find(proj => proj.id === t.projectId);
+              const pName = p ? p.name : 'Unknown';
+              return `
+                <div class="task-card">
+                  <div style="font-weight:600; font-size:0.98rem; margin-bottom:4px;">${t.title}</div>
+                  <div class="muted" style="font-size:0.82rem; margin-bottom:6px;">${t.role} &middot; ${pName}</div>
+                  <div class="split" style="margin-top:10px;">
+                    <span class="badge ${t.priority === 'High' ? 'priority-high' : t.priority === 'Medium' ? 'priority-medium' : 'priority-low'}" style="font-size:0.75rem; padding:3px 8px;">${t.priority}</span>
+                    <select onchange="updateTaskStatus('${t.id}', this.value)" style="padding:4px 8px; font-size:0.75rem; width:auto; border-radius:8px; margin:0; background:#f5f5f7;">
+                      ${columns.map(c => `<option value="${c}" ${t.status === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+              `;
+            }).join('') || '<div class="muted" style="text-align:center; font-size:0.85rem; padding:15px 0;">Empty</div>'}
+          </div>
+        `;
+      });
+      board.innerHTML = html;
+    }
+
+    // --- Render Approvals Panel
+    function renderApprovals() {
+      const list = document.getElementById('approvalsList');
+      if (!list) return;
+      const pending = state.data.tasks.filter(t => t.needsApproval === 'Yes');
+      if (pending.length === 0) {
+        list.innerHTML = `<div class="item-card muted" style="text-align:center; padding:30px;">No pending approvals. All good!</div>`;
+        return;
+      }
+      list.innerHTML = pending.map(t => {
+        const p = state.data.projects.find(proj => proj.id === t.projectId);
+        const pName = p ? p.name : 'Unknown';
+        return `
+          <div class="item-card">
+            <div class="split">
+              <strong>${t.title}</strong>
+              <span class="badge">${t.role}</span>
+            </div>
+            <div class="muted" style="margin:8px 0; font-size:0.92rem;">Project: ${pName} &middot; Priority: ${t.priority}</div>
+            <div class="muted" style="margin-bottom:8px; font-size:0.92rem;">Goal: ${t.goal || 'None'}</div>
+            <div class="row" style="margin-top:12px; gap:8px;">
+              <button onclick="approveTask('${t.id}')" class="btn btn-inline btn-primary" style="padding:6px 12px; font-size:0.82rem; width:auto; margin:0;">Approve</button>
+              <button onclick="rejectTask('${t.id}')" class="btn btn-inline danger" style="padding:6px 12px; font-size:0.82rem; width:auto; margin:0; background:#fff1f2;">Reject</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.approveTask = function(id) {
+      const t = state.data.tasks.find(t => t.id === id);
+      if (t) {
+        t.needsApproval = 'Approved';
+        t.status = 'Done';
+        saveData();
+        renderAll();
+      }
+    };
+
+    window.rejectTask = function(id) {
+      const t = state.data.tasks.find(t => t.id === id);
+      if (t) {
+        t.needsApproval = 'Rejected';
+        t.status = 'Blocked';
+        saveData();
+        renderAll();
+      }
+    };
+
+    // --- Render Stats Cards
+    function renderStats() {
+      const pCount = state.data.projects.length;
+      const tCount = state.data.tasks.length;
+      const pendingCount = state.data.tasks.filter(t => t.needsApproval === 'Yes').length;
+      const blockedCount = state.data.tasks.filter(t => t.status === 'Blocked').length;
+
+      document.getElementById('statProjects').textContent = pCount;
+      document.getElementById('statTasks').textContent = tCount;
+      document.getElementById('statPending').textContent = pendingCount;
+      document.getElementById('statBlocked').textContent = blockedCount;
+    }
+
+    // --- Master Render Pipeline
+    function renderAll() {
+      loadData();
+      populateDropdowns();
+      renderProjects();
+      renderTasks();
+      renderKanbanBoard();
+      renderApprovals();
+      renderStats();
+    }
+
+    // --- Language / i18n
+    const t = {
+      en: {
+        welcome_back: "Clear work. Better decisions.",
+        projects: "Projects",
+        tasks: "Tasks",
+        dashboard: "Dashboard",
+        approvals: "Approvals",
+        noProjects: "No projects saved.",
+        noTasks: "No tasks saved."
+      },
+      ur: {
+        welcome_back: "واضح کام۔ بہتر فیصلے،",
+        projects: "منصوبے",
+        tasks: "ٹاسک",
+        dashboard: "ڈیش بورڈ",
+        approvals: "منظوری",
+        noProjects: "کوئی منصوبہ محفوظ نہیں ہے۔",
+        noTasks: "کوئی ٹاسک محفوظ نہیں ہے۔"
+      }
+    };
+
+    function currentLang() {
+      return state.language === 'ur' ? 'ur' : 'en';
+    }
+
+    const langSwitcher = document.getElementById('languageSwitcher');
+    if (langSwitcher) {
+      langSwitcher.value = state.language;
+      langSwitcher.addEventListener('change', (e) => {
+        state.language = e.target.value;
+        const isRtl = state.language === 'ur';
+        document.body.classList.toggle('rtl', isRtl);
+        renderAll();
+      });
+    }
+
+    // --- Init Render
+    if (state.authenticated || (localStorage.getItem(SESSION_KEY)==='true' && localStorage.getItem(AUTH_KEY))) {
+      showDashboard();
+    } else {
+      showAuth();
+    }
+  </script>
+  </script>
+</body>
+</html>
